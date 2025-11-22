@@ -1,0 +1,11 @@
+{
+  "domain": "webel_gctrl",
+  "name": "Webel G-CTRL",
+  "version": "0.1.0",
+  "documentation": "https://github.com/morotsgurka/garo-gctrl-homeassistant",
+  "requirements": [],
+  "codeowners": ["@morotsgurka"],
+  "iot_class": "cloud_polling",
+  "config_flow": true,
+  "loggers": ["custom_components.webel_gctrl"]
+}

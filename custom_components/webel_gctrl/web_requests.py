@@ -6,12 +6,7 @@ login_url_mobile= 'http://webel-online.se/mobile/login.asp'
 secure_url_mobile= 'http://webel-online.se/mobile/mobile.asp'
 mobile_request_url = 'http://webel-online.se/mobile/ajax/mobileajax.asp'
 energy_url = 'http://webel-online.se/mobile/mobile.asp'
-#{"success": "1"}
 
-#    "action": "directstart",
-#    "directstartuntil": "22:41",
-#    "success": "1"
-#}
 login_payload = {
     'lang': 'se',
     'username': '',
@@ -22,11 +17,13 @@ OUTLET_ID_PATTERN = re.compile(r"id:\s*'([0-9A-Z\-]+)'")
 DIRECTSTART_TEXT_PATTERN = re.compile(r"Aktiverat till\s*([0-9]{2}:[0-9]{2})")
 
 def check_credentials():
-    if login_payload['username'] == '' or login_payload['password'] == '':
-        print("Please set your username and password in the script before running.")
-        login_payload['username'] = input("Username: ")
-        login_payload['password'] = input("Password: ")
-        check_credentials()
+    """Ensure credentials are present in login_payload.
+
+    In Home Assistant we never prompt; credentials must be provided
+    via configuration. If they are missing, just raise an error.
+    """
+    if login_payload["username"] == "" or login_payload["password"] == "":
+        raise RuntimeError("Webel credentials not set in login_payload")
 
 def get_dynamic_id(session: requests.Session) -> str:
     """
@@ -186,9 +183,6 @@ def get_energyusage():
 
 ## Test stuff below here
 
-#get_energyusage()
-#print(turn_on())
-#print(turn_on(minutes=17))
-print(check_state())
-#turn_on()
-#turn_off()
+if __name__ == "__main__":
+    # Simple manual test runner; will only execute when called directly.
+    print(check_state())

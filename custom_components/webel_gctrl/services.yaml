@@ -1,0 +1,15 @@
+turn_on:
+  name: Turn on Webel outlet
+  description: Start directstart on the Webel outlet
+  fields:
+    entity_id:
+      description: Target Webel switch
+      example: switch.webel_gctrl_outlet
+
+turn_off:
+  name: Turn off Webel outlet
+  description: Cancel directstart on the Webel outlet
+  fields:
+    entity_id:
+      description: Target Webel switch
+      example: switch.webel_gctrl_outlet
