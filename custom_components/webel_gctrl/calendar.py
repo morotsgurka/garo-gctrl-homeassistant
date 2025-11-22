@@ -99,10 +99,24 @@ def parse_bookings_to_events(data: dict | None) -> list[CalendarEvent]:
         try:
             # Split id/day/time portion
             id_part, time_part = raw.split(";")
-            # id_part like "000-000-017-173-A2-1-6" -> day is last segment
+            # id_part like "000-000-017-173-A2-1-6"
             parts = id_part.split("-")
+
+            # Day is last segment
             day_str = parts[-1]
             weekday = int(day_str)  # 1=Mon..7=Sun
+
+            # Timer type is segment like "A1" or "A2";
+            # from the web UI we know these map to
+            # recurring vs temporary bookings.
+            timer_type = parts[-3] if len(parts) >= 3 else ""
+            if timer_type == "A1":
+                kind = "recurring"
+            elif timer_type == "A2":
+                kind = "temporary"
+            else:
+                kind = "unknown"
+
             hour_str, minute_str = time_part.split(":")
             hh = int(hour_str)
             mm = int(minute_str)
@@ -113,12 +127,20 @@ def parse_bookings_to_events(data: dict | None) -> list[CalendarEvent]:
         event_start = next_weekday_datetime(now, weekday, time(hh, mm))
         event_end = event_start + timedelta(hours=1)
 
-        # Simple title: "Scheduled departure"; could be improved later
+        # Human-friendly summary depending on kind
+        if kind == "recurring":
+            summary = "Webel recurring booking"
+        elif kind == "temporary":
+            summary = "Webel temporary booking"
+        else:
+            summary = "Webel booking"
+
         events.append(
             CalendarEvent(
-                summary="Webel booking",
+                summary=summary,
                 start=event_start,
                 end=event_end,
+                description=f"type={kind}",
             )
         )
 
