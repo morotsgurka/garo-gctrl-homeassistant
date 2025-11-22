@@ -35,3 +35,11 @@ class WebelClient:
             None,
             partial(web_requests_sync.check_state, username=self._username, password=self._password),
         )
+
+    async def async_fetch_bookings(self) -> dict | None:
+        """Fetch all bookings for this client."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None,
+            partial(web_requests_sync.fetch_all_bookings, username=self._username, password=self._password),
+        )

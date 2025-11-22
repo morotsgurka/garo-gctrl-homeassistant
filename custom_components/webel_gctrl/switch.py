@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import timedelta
 import logging
 
-from homeassistant.components.switch import SwitchEntity
+from homeassistant.components.switch import SwitchEntity, SwitchDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -50,6 +50,7 @@ class WebelSwitch(SwitchEntity):
     """Representation of the Webel outlet as a switch."""
 
     _attr_icon = "mdi:power-plug"
+    _attr_device_class = SwitchDeviceClass.OUTLET
 
     def __init__(
         self,

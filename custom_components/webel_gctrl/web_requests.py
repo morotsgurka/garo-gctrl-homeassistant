@@ -34,7 +34,7 @@ def get_dynamic_id(session: requests.Session) -> str:
     m = OUTLET_ID_PATTERN.search(resp.text)
     if not m:
         raise RuntimeError("Could not find outlet ID in mobile.asp")
-    print(f"Found dynamic outlet ID: {m.group(1)}")
+    #print(f"Found dynamic outlet ID: {m.group(1)}")
     return m.group(1)
 
 
@@ -56,7 +56,7 @@ def fetch_all_bookings():
         r = s.post(mobile_request_url, data=payload)
         data = r.json()
 
-        if data.get('success', 0) < 1:
+        if int(data.get('success', "0")) < 1:
             print("Failed to fetch bookings")
             print(json.dumps(data, indent=4, sort_keys=True))
             return None
@@ -144,7 +144,7 @@ def perform_action_with_session(s: requests.Session, payload: dict):
 
     action = s.post(mobile_request_url, data=payload)
     json_response = action.json()
-    if json_response.get('success') == '1':
+    if int(json_response.get('success', "0")) == 1:
         if payload['action'] == 'directstart':
             return True, json_response.get('directstartuntil')
         else:
@@ -185,4 +185,9 @@ def get_energyusage():
 
 if __name__ == "__main__":
     # Simple manual test runner; will only execute when called directly.
-    print(check_state())
+
+    # set login credentials here for testing using input()
+    login_payload["username"] = input("Enter Webel username: ")
+    login_payload["password"] = input("Enter Webel password: ")
+    #print(check_state())
+    print(fetch_all_bookings())

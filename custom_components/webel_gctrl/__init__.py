@@ -12,7 +12,7 @@ from .webel_client import WebelClient
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[str] = ["switch"]
+PLATFORMS: list[str] = ["switch", "calendar"]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Webel G-CTRL from a config entry."""

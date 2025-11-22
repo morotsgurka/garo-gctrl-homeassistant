@@ -28,3 +28,10 @@ def check_state(username: str | None = None, password: str | None = None) -> dic
     if username is not None and password is not None:
         _apply_credentials(username, password)
     return _wr.check_state()
+
+
+def fetch_all_bookings(username: str | None = None, password: str | None = None) -> dict[str, Any] | None:
+    """Fetch all bookings with the given credentials."""
+    if username is not None and password is not None:
+        _apply_credentials(username, password)
+    return _wr.fetch_all_bookings()
