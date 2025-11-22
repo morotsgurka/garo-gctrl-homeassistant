@@ -1,6 +1,7 @@
 import requests
 import json
 import re
+from datetime import datetime, timedelta
 
 login_url_mobile= 'http://webel-online.se/mobile/login.asp'
 secure_url_mobile= 'http://webel-online.se/mobile/mobile.asp'
@@ -160,25 +161,46 @@ def sort_energy_json(json_response):
     return sorted_json
 
 
-def get_energyusage():
+def get_energyusage_raw(from_date: str | None = None, to_date: str | None = None):
+    """Return raw JSON from fetchenergy for a given date range.
+
+    If from_date/to_date are None, default to the current month.
+    """
     check_credentials()
     with requests.session() as s:
         s.post(login_url_mobile, data=login_payload)
         outlet_id = get_dynamic_id(s)
 
+        if from_date is None or to_date is None:
+            today = datetime.utcnow().date()
+            first = today.replace(day=1)
+            # Next month first day, then back one day
+            if first.month == 12:
+                next_month_first = first.replace(year=first.year + 1, month=1)
+            else:
+                next_month_first = first.replace(month=first.month + 1)
+            last = next_month_first - timedelta(days=1)
+            from_date = first.isoformat()
+            to_date = last.isoformat()
+
         energy_payload = {
             'action': 'fetchenergy',
             'id': outlet_id,
-            'fromDate': '2023-11-01',
-            'toDate': '2023-11-30',
+            'fromDate': from_date,
+            'toDate': to_date,
             'resolution': 'DAY'
         }
         energy = s.post(mobile_request_url, data=energy_payload)
-        json_response = energy.json()
-        if json_response.get('success') == '1':
-            print(sort_energy_json(json_response))
-        else:
-            print("Failed to get energy usage")
+        return energy.json()
+
+
+def get_energyusage():
+    """Convenience wrapper for manual testing: print sorted energy JSON."""
+    json_response = get_energyusage_raw()
+    if json_response.get('success') == '1':
+        print(sort_energy_json(json_response))
+    else:
+        print("Failed to get energy usage")
 
 
 ## Test stuff below here
@@ -190,4 +212,5 @@ if __name__ == "__main__":
     login_payload["username"] = input("Enter Webel username: ")
     login_payload["password"] = input("Enter Webel password: ")
     #print(check_state())
-    print(fetch_all_bookings())
+    #print(fetch_all_bookings())
+    print(get_energyusage())

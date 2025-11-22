@@ -43,3 +43,11 @@ class WebelClient:
             None,
             partial(web_requests_sync.fetch_all_bookings, username=self._username, password=self._password),
         )
+
+    async def async_get_energyusage(self) -> dict | None:
+        """Fetch energy usage JSON for the current month."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None,
+            partial(web_requests_sync.get_energyusage, username=self._username, password=self._password),
+        )

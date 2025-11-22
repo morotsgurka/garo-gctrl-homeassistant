@@ -35,3 +35,15 @@ def fetch_all_bookings(username: str | None = None, password: str | None = None)
     if username is not None and password is not None:
         _apply_credentials(username, password)
     return _wr.fetch_all_bookings()
+
+
+def get_energyusage(
+    username: str | None = None,
+    password: str | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> dict[str, Any] | None:
+    """Fetch raw energy JSON using provided credentials."""
+    if username is not None and password is not None:
+        _apply_credentials(username, password)
+    return _wr.get_energyusage_raw(from_date=from_date, to_date=to_date)
