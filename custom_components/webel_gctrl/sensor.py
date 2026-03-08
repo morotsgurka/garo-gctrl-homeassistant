@@ -57,7 +57,7 @@ class WebelEnergySensor(SensorEntity):
         self._client = client
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_energy"
-        self._attr_name = "Webel G-CTRL Daily Energy"
+        self._attr_name = "Webel G-CTRL Energy"
         self._native_value: float | None = None
 
     @property
@@ -65,7 +65,14 @@ class WebelEnergySensor(SensorEntity):
         return self._native_value
 
     async def async_update(self) -> None:
-        """Fetch latest energy usage and update today's value."""
+        """Fetch latest energy usage and update month-to-date total.
+
+        The Webel API returns per-day kWh values for the current month.
+        Home Assistant's Energy dashboard expects a total-increasing meter
+        reading, so we sum all days in the current month up to today and
+        expose that cumulative value. The Energy dashboard will then
+        derive per-day usage from the differences.
+        """
         _LOGGER.debug(
             "Requesting latest energy usage from Webel for entry %s", self._entry.entry_id
         )
@@ -83,18 +90,34 @@ class WebelEnergySensor(SensorEntity):
             _LOGGER.warning("Failed to parse energy JSON: %s", err)
             return
 
-        today_str = date.today().isoformat()
-        value_str = energy_map.get(today_str, "0")
-        _LOGGER.debug("Energy value for %s is %s", today_str, value_str)
-        try:
-            self._native_value = float(value_str)
-            _LOGGER.debug(
-                "Updated native energy value for %s to %s",
-                today_str,
-                self._native_value,
-            )
-        except (ValueError, TypeError):
-            _LOGGER.warning("Invalid energy value for %s: %s", today_str, value_str)
+        today = date.today()
+        total = 0.0
+
+        for ts, value_str in energy_map.items():
+            try:
+                day = date.fromisoformat(ts)
+            except ValueError:
+                _LOGGER.debug("Skipping invalid energy timestamp: %s", ts)
+                continue
+
+            # Only include days from the current month up to today
+            if day.year != today.year or day.month != today.month or day > today:
+                continue
+
+            try:
+                val = float(value_str)
+            except (ValueError, TypeError):
+                _LOGGER.debug("Skipping invalid energy value for %s: %s", ts, value_str)
+                continue
+
+            total += val
+
+        self._native_value = total
+        _LOGGER.debug(
+            "Updated month-to-date energy total to %s kWh for %s",
+            self._native_value,
+            today,
+        )
 
 
 class WebelStatusSensor(SensorEntity):

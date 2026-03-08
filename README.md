@@ -12,7 +12,7 @@ Webel Online is a service used by many Swedish parking lots and apartment comple
 
 - Switch entity for turning the outlet on/off.
 - "Until" attribute on the switch showing when an active session will turn off automatically (for example: `22:28`).
-- Daily energy sensor suitable for the Energy dashboard.
+- Energy sensor (total-increasing kWh) suitable for the Energy dashboard.
 - Calendar view for scheduled events
 - Cloud polling (since Webel Online does not provide a public API, the integration scrapes the web interface).
 
