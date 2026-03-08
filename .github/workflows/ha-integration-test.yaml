@@ -92,7 +92,7 @@ jobs:
 
           # Wait (up to ~3 minutes) for integration setup and initial state
           echo "Waiting for Webel G-CTRL integration to start and fetch state..."
-          for i in $(seq 1 18); do
+          for i in $(seq 1 24); do
             logs=$(docker logs ha_test 2>&1 || true)
 
             if echo "$logs" | grep -q "Webel G-CTRL integration setup complete" && \
@@ -101,13 +101,14 @@ jobs:
               break
             fi
 
-            # If container died early, fail fast
-            if ! docker ps --format '{{.Names}}' | grep -q '^ha_test$'; then
-              echo "Home Assistant container exited before integration completed" >&2
-              echo "$logs"
-              exit 1
+            # If container is running or image is still pulling, keep waiting
+            if docker ps --format '{{.Names}}' | grep -q '^ha_test$'; then
+              sleep 10
+              continue
             fi
 
+            # If container is not running and we don't yet see our messages,
+            # keep waiting a bit longer to allow image pull/startup to finish.
             sleep 10
           done
 
