@@ -45,6 +45,42 @@ jobs:
           webel_password: ${WEBEL_PASSWORD}
           EOF
 
+      - name: Pre-create webel_gctrl config entry
+        run: |
+          mkdir -p ha_config/.storage
+          cat > ha_config/.storage/core.config_entries << EOF
+          {
+            "version": 1,
+            "minor_version": 1,
+            "key": "core.config_entries",
+            "data": {
+              "entries": [
+                {
+                  "created_at": "2026-03-08T11:39:37.376733+00:00",
+                  "data": {
+                    "username": "${WEBEL_USERNAME}",
+                    "password": "${WEBEL_PASSWORD}"
+                  },
+                  "disabled_by": null,
+                  "discovery_keys": {},
+                  "domain": "webel_gctrl",
+                  "entry_id": "ci-webel-gctrl-test",
+                  "minor_version": 1,
+                  "modified_at": "2024-01-01T00:00:00.000000+00:00",
+                  "options": {},
+                  "pref_disable_new_entities": false,
+                  "pref_disable_polling": false,
+                  "source": "user",
+                  "subentries": [],
+                  "title": "CI Webel G-CTRL Test",
+                  "unique_id": null,
+                  "version": 1
+                }
+              ]
+            }
+          }
+          EOF
+
       - name: Run Home Assistant container with custom component
         run: |
           docker run \
@@ -60,6 +96,18 @@ jobs:
           # Show logs and fail on errors or tracebacks (other than known benign warnings)
           echo "==== Home Assistant log (tail) ===="
           docker logs ha_test --tail=500 || true
+
+          # Ensure the Webel G-CTRL integration actually started
+          if ! docker logs ha_test 2>&1 | grep -q "Webel G-CTRL integration setup complete"; then
+            echo "Webel G-CTRL integration did not complete setup" >&2
+            exit 1
+          fi
+
+          # Ensure we fetched switch state at least once (on/off data present)
+          if ! docker logs ha_test 2>&1 | grep -q "Switch is_on check, coordinator data"; then
+            echo "Webel G-CTRL switch state was never evaluated (no data returned)" >&2
+            exit 1
+          fi
 
           # Fail the job if there are Python tracebacks or ERROR entries from your integration
           if docker logs ha_test 2>&1 | grep -E "Traceback|ERROR\s+\[custom_components.webel_gctrl"; then

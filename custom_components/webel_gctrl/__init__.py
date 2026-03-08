@@ -16,6 +16,7 @@ PLATFORMS: list[str] = ["switch", "calendar", "sensor"]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Webel G-CTRL from a config entry."""
+    _LOGGER.debug("Webel G-CTRL integration setup starting for entry %s", entry.entry_id)
     username = entry.data["username"]
     password = entry.data["password"]
 
@@ -23,6 +24,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = WebelClient(username, password)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    _LOGGER.debug("Webel G-CTRL integration setup complete for entry %s", entry.entry_id)
 
     return True
 
