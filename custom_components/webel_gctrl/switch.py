@@ -24,6 +24,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Webel switch from a config entry."""
+    _LOGGER.debug("Setting up Webel G-CTRL switch for entry %s", entry.entry_id)
     client: WebelClient = hass.data[DOMAIN][entry.entry_id]
 
     async def async_update_data():
@@ -42,7 +43,10 @@ async def async_setup_entry(
 
     await coordinator.async_config_entry_first_refresh()
 
+    _LOGGER.debug("Initial switch state after first refresh: %s", coordinator.data)
+
     entity = WebelSwitch(coordinator, client, entry)
+    _LOGGER.debug("Created Webel G-CTRL switch entity with unique_id=%s", entity.unique_id)
     async_add_entities([entity])
 
 
@@ -70,20 +74,27 @@ class WebelSwitch(SwitchEntity):
     @property
     def is_on(self) -> bool:
         data = self._coordinator.data or {}
+        _LOGGER.debug("Switch is_on check, coordinator data: %s", data)
         return bool(data.get("on"))
 
     @property
     def extra_state_attributes(self):
         data = self._coordinator.data or {}
+        _LOGGER.debug("Switch extra_state_attributes, coordinator data: %s", data)
         return {"until": data.get("until")}
 
     async def async_turn_on(self, **kwargs) -> None:  # type: ignore[override]
+        _LOGGER.debug("Turning ON Webel G-CTRL switch %s", self.unique_id)
         await self._client.async_turn_on()
         await self._coordinator.async_request_refresh()
+        _LOGGER.debug("Requested refresh after turning ON Webel G-CTRL switch %s", self.unique_id)
 
     async def async_turn_off(self, **kwargs) -> None:  # type: ignore[override]
+        _LOGGER.debug("Turning OFF Webel G-CTRL switch %s", self.unique_id)
         await self._client.async_turn_off()
         await self._coordinator.async_request_refresh()
+        _LOGGER.debug("Requested refresh after turning OFF Webel G-CTRL switch %s", self.unique_id)
 
     async def async_update(self) -> None:
+        _LOGGER.debug("Manual update requested for Webel G-CTRL switch %s", self.unique_id)
         await self._coordinator.async_request_refresh()
