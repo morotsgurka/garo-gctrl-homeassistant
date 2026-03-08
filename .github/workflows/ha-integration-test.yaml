@@ -90,33 +90,52 @@ jobs:
             -e TZ=UTC \
             ghcr.io/home-assistant/home-assistant:2026.3.1 &
 
-          # Wait for HA to start up and settle
-          sleep 120
+          # Wait (up to ~3 minutes) for integration setup and initial state
+          echo "Waiting for Webel G-CTRL integration to start and fetch state..."
+          for i in $(seq 1 18); do
+            logs=$(docker logs ha_test 2>&1 || true)
 
-          # Show logs and fail on errors or tracebacks (other than known benign warnings)
+            if echo "$logs" | grep -q "Webel G-CTRL integration setup complete" && \
+               echo "$logs" | grep -q "Initial switch state after first refresh"; then
+              echo "Webel G-CTRL integration setup complete and initial state fetched."
+              break
+            fi
+
+            # If container died early, fail fast
+            if ! docker ps --format '{{.Names}}' | grep -q '^ha_test$'; then
+              echo "Home Assistant container exited before integration completed" >&2
+              echo "$logs"
+              exit 1
+            fi
+
+            sleep 10
+          done
+
+          # Final checks to ensure both messages appeared
+          logs=$(docker logs ha_test 2>&1 || true)
+
+          # Show logs and then perform validations
           echo "==== Home Assistant log (tail) ===="
-          docker logs ha_test --tail=500 || true
+          echo "$logs" | tail -n 500 || true
 
-          # Ensure the Webel G-CTRL integration actually started
-          if ! docker logs ha_test 2>&1 | grep -q "Webel G-CTRL integration setup complete"; then
+          if ! echo "$logs" | grep -q "Webel G-CTRL integration setup complete"; then
             echo "Webel G-CTRL integration did not complete setup" >&2
             exit 1
           fi
 
-          # Ensure we fetched switch state at least once (on/off data present)
-          if ! docker logs ha_test 2>&1 | grep -q "Switch is_on check, coordinator data"; then
-            echo "Webel G-CTRL switch state was never evaluated (no data returned)" >&2
+          if ! echo "$logs" | grep -q "Initial switch state after first refresh"; then
+            echo "Webel G-CTRL switch never fetched initial state (no data returned)" >&2
             exit 1
           fi
 
           # Fail the job if there are Python tracebacks or ERROR entries from your integration
-          if docker logs ha_test 2>&1 | grep -E "Traceback|ERROR\s+\[custom_components.webel_gctrl"; then
+          if echo "$logs" | grep -E "Traceback|ERROR\s+\[custom_components.webel_gctrl"; then
             echo "Integration produced errors in Home Assistant logs" >&2
             exit 1
           fi
 
           # Optionally also fail on SyntaxWarning from your domain
-          if docker logs ha_test 2>&1 | grep -E "WARNING\s+\[py.warnings].*custom_components.webel_gctrl"; then
+          if echo "$logs" | grep -E "WARNING\s+\[py.warnings].*custom_components.webel_gctrl"; then
             echo "Integration produced Python warnings" >&2
             exit 1
           fi

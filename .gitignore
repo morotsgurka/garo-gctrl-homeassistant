@@ -172,3 +172,4 @@ cython_debug/
 /config
 .DS_Store
 *.storage/*
+*ha_config/*
