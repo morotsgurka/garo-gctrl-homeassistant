@@ -1,0 +1,78 @@
+name: Home Assistant integration test
+
+on:
+  # Only run when this workflow file changes, or when started manually
+  push:
+    paths:
+      - '.github/workflows/ha-integration-test.yaml'
+  workflow_dispatch:
+
+jobs:
+  test-with-latest-ha:
+    runs-on: ubuntu-latest
+
+    env:
+      # Test credentials stored as GitHub secrets
+      WEBEL_USERNAME: ${{ secrets.WEBEL_USERNAME }}
+      WEBEL_PASSWORD: ${{ secrets.WEBEL_PASSWORD }}
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up test config
+        run: |
+          mkdir -p ha_config/custom_components
+
+          # Link custom component into Home Assistant config dir
+          ln -s $GITHUB_WORKSPACE/custom_components/webel_gctrl ha_config/custom_components/webel_gctrl
+
+          # Minimal configuration.yaml that enables your integration via config flow
+          cat > ha_config/configuration.yaml << 'EOF'
+          default_config:
+
+          logger:
+            default: warning
+            logs:
+              custom_components.webel_gctrl: debug
+          EOF
+
+      - name: Write secrets for test instance
+        run: |
+          mkdir -p ha_config
+          cat > ha_config/secrets.yaml << EOF
+          webel_username: ${WEBEL_USERNAME}
+          webel_password: ${WEBEL_PASSWORD}
+          EOF
+
+      - name: Run Home Assistant container with custom component
+        run: |
+          docker run \
+            --name ha_test \
+            --rm \
+            -v $GITHUB_WORKSPACE/ha_config:/config \
+            -e TZ=UTC \
+            ghcr.io/home-assistant/home-assistant:2026.3.1 \
+            --log-level debug &
+
+          # Wait for HA to start up and settle
+          sleep 120
+
+          # Show logs and fail on errors or tracebacks (other than known benign warnings)
+          echo "==== Home Assistant log (tail) ===="
+          docker logs ha_test --tail=500 || true
+
+          # Fail the job if there are Python tracebacks or ERROR entries from your integration
+          if docker logs ha_test 2>&1 | grep -E "Traceback|ERROR\s+\[custom_components.webel_gctrl"; then
+            echo "Integration produced errors in Home Assistant logs" >&2
+            exit 1
+          fi
+
+          # Optionally also fail on SyntaxWarning from your domain
+          if docker logs ha_test 2>&1 | grep -E "WARNING\s+\[py.warnings].*custom_components.webel_gctrl"; then
+            echo "Integration produced Python warnings" >&2
+            exit 1
+          fi
+
+          # Stop container if still running
+          docker stop ha_test || true
