@@ -22,6 +22,8 @@ Webel Online is a service used by many Swedish parking lots and apartment comple
 
 If you do not have HACS installed yet, visit https://hacs.xyz for installation instructions.
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=morotsgurka&repository=https%3A%2F%2Fgithub.com%2Fmorotsgurka%2Fgaro-gctrl-homeassistant&category=integration)
+
 1. In Home Assistant, go to **HACS → Integrations**.
 2. Open the menu (⋮) and choose **Custom repositories**.
 3. Add this repository's URL as a custom repository and select **Integration** as the category.
