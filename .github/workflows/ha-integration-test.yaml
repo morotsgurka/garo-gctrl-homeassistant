@@ -52,8 +52,7 @@ jobs:
             --rm \
             -v $GITHUB_WORKSPACE/ha_config:/config \
             -e TZ=UTC \
-            ghcr.io/home-assistant/home-assistant:2026.3.1 \
-            --log-level debug &
+            ghcr.io/home-assistant/home-assistant:2026.3.1 &
 
           # Wait for HA to start up and settle
           sleep 120
