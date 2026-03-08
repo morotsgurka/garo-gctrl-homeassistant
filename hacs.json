@@ -1,6 +1,5 @@
 {
   "name": "Webel G-CTRL",
-  "domains": ["switch", "sensor", "calendar"],
-  "iot_class": "cloud_polling",
-  "homeassistant": "2026.3.1"
+  "country": "SE",
+  "homeassistant": "2023.12.0"
 }

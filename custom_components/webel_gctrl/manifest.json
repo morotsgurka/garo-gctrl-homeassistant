@@ -5,6 +5,7 @@
   "config_flow": true,
   "documentation": "https://github.com/morotsgurka/garo-gctrl-homeassistant",
   "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/morotsgurka/garo-gctrl-homeassistant/issues",
   "loggers": ["custom_components.webel_gctrl"],
   "requirements": [],
   "version": "0.1.0"
