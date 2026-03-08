@@ -26,6 +26,37 @@ def check_credentials():
     if login_payload["username"] == "" or login_payload["password"] == "":
         raise RuntimeError("Webel credentials not set in login_payload")
 
+
+def validate_credentials(username: str, password: str) -> bool:
+    """Return True if the given credentials are accepted by Webel Online.
+
+    We mirror the normal login flow: perform a login POST, then load the
+    mobile page and ensure we can extract a dynamic outlet ID. If we cannot
+    find the outlet ID, treat credentials as invalid.
+    """
+    payload = {
+        "lang": "se",
+        "username": username,
+        "password": password,
+    }
+
+    with requests.session() as s:
+        # Attempt login
+        resp_login = s.post(login_url_mobile, data=payload)
+        resp_login.raise_for_status()
+
+        # Load the secured mobile page and look for the outlet ID
+        resp_mobile = s.get(secure_url_mobile)
+        resp_mobile.raise_for_status()
+        m = OUTLET_ID_PATTERN.search(resp_mobile.text)
+        if not m:
+            # This is the same condition that later leads to
+            # "Could not find outlet ID in mobile.asp" during runtime,
+            # so treat it as invalid credentials here.
+            return False
+
+    return True
+
 def get_dynamic_id(session: requests.Session) -> str:
     """
     Fetch mobile.asp and extract the outlet ID dynamically.

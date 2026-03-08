@@ -26,13 +26,24 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Webel sensors from a config entry."""
-    _LOGGER.debug("Setting up Webel G-CTRL energy sensor for entry %s", entry.entry_id)
-    client: WebelClient = hass.data[DOMAIN][entry.entry_id]
-    sensor = WebelEnergySensor(client, entry)
+    _LOGGER.debug("Setting up Webel G-CTRL sensors for entry %s", entry.entry_id)
+    entry_data = hass.data[DOMAIN][entry.entry_id]
+    client: WebelClient = entry_data["client"]
+    coordinator = entry_data["state_coordinator"]
+
+    energy_sensor = WebelEnergySensor(client, entry)
     _LOGGER.debug(
-        "Created Webel G-CTRL energy sensor entity with unique_id=%s", sensor.unique_id
+        "Created Webel G-CTRL energy sensor entity with unique_id=%s",
+        energy_sensor.unique_id,
     )
-    async_add_entities([sensor])
+
+    status_sensor = WebelStatusSensor(coordinator, entry)
+    _LOGGER.debug(
+        "Created Webel G-CTRL status sensor entity with unique_id=%s",
+        status_sensor.unique_id,
+    )
+
+    async_add_entities([energy_sensor, status_sensor])
 
 
 class WebelEnergySensor(SensorEntity):
@@ -84,3 +95,35 @@ class WebelEnergySensor(SensorEntity):
             )
         except (ValueError, TypeError):
             _LOGGER.warning("Invalid energy value for %s: %s", today_str, value_str)
+
+
+class WebelStatusSensor(SensorEntity):
+    """Sensor reporting the current status/problem of the Webel integration."""
+
+    _attr_icon = "mdi:alert-circle-outline"
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        self._coordinator = coordinator
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_status"
+        self._attr_name = "Webel G-CTRL Status"
+
+    @property
+    def native_value(self) -> str:
+        """Return a human-readable status string based on coordinator state."""
+        # If the last refresh failed, report the error
+        if not self._coordinator.last_update_success:
+            err = getattr(self._coordinator, "last_exception", None)
+            if err:
+                return f"Problem: {err}"
+            return "Problem: Failed to fetch data from Webel Online"
+
+        data = self._coordinator.data or {}
+        if not data:
+            return "Problem: No data received from Webel Online"
+
+        return "All ok!"
+
+    async def async_update(self) -> None:
+        """Request an updated state from the shared coordinator."""
+        await self._coordinator.async_request_refresh()

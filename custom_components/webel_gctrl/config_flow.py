@@ -8,6 +8,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 
 from .const import DOMAIN
+from . import web_requests_sync
 
 
 class WebelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -20,7 +21,22 @@ class WebelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            return self.async_create_entry(title=user_input["username"], data=user_input)
+            username = user_input["username"]
+            password = user_input["password"]
+
+            try:
+                valid = await self.hass.async_add_executor_job(
+                    web_requests_sync.validate_credentials,
+                    username,
+                    password,
+                )
+            except Exception:  # noqa: BLE001
+                errors["base"] = "cannot_connect"
+            else:
+                if not valid:
+                    errors["base"] = "invalid_auth"
+                else:
+                    return self.async_create_entry(title=username, data=user_input)
 
         data_schema = vol.Schema(
             {

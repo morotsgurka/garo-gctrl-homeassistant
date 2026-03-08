@@ -23,7 +23,8 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Webel calendar from a config entry."""
-    client: WebelClient = hass.data[DOMAIN][entry.entry_id]
+    entry_data = hass.data[DOMAIN][entry.entry_id]
+    client: WebelClient = entry_data["client"]
     async_add_entities([WebelCalendar(client, entry)])
 
 

@@ -47,3 +47,8 @@ def get_energyusage(
     if username is not None and password is not None:
         _apply_credentials(username, password)
     return _wr.get_energyusage_raw(from_date=from_date, to_date=to_date)
+
+
+def validate_credentials(username: str, password: str) -> bool:
+    """Validate credentials against Webel Online in a blocking manner."""
+    return _wr.validate_credentials(username, password)

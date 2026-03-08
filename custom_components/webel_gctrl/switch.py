@@ -1,21 +1,18 @@
 """Switch platform for Webel G-CTRL."""
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
 
 from homeassistant.components.switch import SwitchEntity, SwitchDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 from .webel_client import WebelClient
 
 _LOGGER = logging.getLogger(__name__)
-
-SCAN_INTERVAL = timedelta(seconds=60)
 
 
 async def async_setup_entry(
@@ -25,23 +22,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up Webel switch from a config entry."""
     _LOGGER.debug("Setting up Webel G-CTRL switch for entry %s", entry.entry_id)
-    client: WebelClient = hass.data[DOMAIN][entry.entry_id]
-
-    async def async_update_data():
-        try:
-            return await client.async_check_state()
-        except Exception as err:  # noqa: BLE001
-            raise UpdateFailed(str(err)) from err
-
-    coordinator = DataUpdateCoordinator(
-        hass,
-        _LOGGER,
-        name="webel_gctrl_switch",
-        update_method=async_update_data,
-        update_interval=SCAN_INTERVAL,
-    )
-
-    await coordinator.async_config_entry_first_refresh()
+    entry_data = hass.data[DOMAIN][entry.entry_id]
+    coordinator: DataUpdateCoordinator = entry_data["state_coordinator"]
+    client: WebelClient = entry_data["client"]
 
     _LOGGER.debug("Initial switch state after first refresh: %s", coordinator.data)
 

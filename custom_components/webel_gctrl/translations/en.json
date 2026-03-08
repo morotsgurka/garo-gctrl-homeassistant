@@ -1,0 +1,18 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Webel G-CTRL",
+        "description": "Enter your Webel Online parking place number and personal code.",
+        "data": {
+          "username": "Parking place number",
+          "password": "Personal code"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid parking place number or personal code.",
+      "cannot_connect": "Unable to connect to Webel Online. Please check your internet connection and try again."
+    }
+  }
+}
