@@ -7,7 +7,7 @@ from homeassistant.components.switch import SwitchEntity, SwitchDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
 
 from .const import DOMAIN
 from .webel_client import WebelClient
@@ -33,7 +33,7 @@ async def async_setup_entry(
     async_add_entities([entity])
 
 
-class WebelSwitch(SwitchEntity):
+class WebelSwitch(CoordinatorEntity[DataUpdateCoordinator], SwitchEntity):
     """Representation of the Webel outlet as a switch."""
 
     _attr_icon = "mdi:power-plug"
@@ -45,6 +45,7 @@ class WebelSwitch(SwitchEntity):
         client: WebelClient,
         entry: ConfigEntry,
     ) -> None:
+        super().__init__(coordinator)
         self._coordinator = coordinator
         self._client = client
         self._attr_unique_id = f"{entry.entry_id}_switch"
@@ -77,7 +78,3 @@ class WebelSwitch(SwitchEntity):
         await self._client.async_turn_off()
         await self._coordinator.async_request_refresh()
         _LOGGER.debug("Requested refresh after turning OFF Webel G-CTRL switch %s", self.unique_id)
-
-    async def async_update(self) -> None:
-        _LOGGER.debug("Manual update requested for Webel G-CTRL switch %s", self.unique_id)
-        await self._coordinator.async_request_refresh()

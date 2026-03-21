@@ -10,7 +10,7 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -35,12 +35,13 @@ async def async_setup_entry(
     async_add_entities([sensor])
 
 
-class WebelProblemBinarySensor(BinarySensorEntity):
+class WebelProblemBinarySensor(CoordinatorEntity[DataUpdateCoordinator], BinarySensorEntity):
     """Binary sensor that is on when there is a problem reaching Webel."""
 
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
 
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
         self._coordinator = coordinator
         self._attr_unique_id = f"{entry.entry_id}_problem"
         self._attr_name = "Webel G-CTRL Problem"
@@ -54,6 +55,3 @@ class WebelProblemBinarySensor(BinarySensorEntity):
         data = self._coordinator.data or {}
         return not bool(data)
 
-    async def async_update(self) -> None:
-        """Request an updated state from the shared coordinator."""
-        await self._coordinator.async_request_refresh()

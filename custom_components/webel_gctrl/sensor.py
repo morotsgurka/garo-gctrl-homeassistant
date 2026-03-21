@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from datetime import date
 import logging
-from typing import Any
 
 from homeassistant.components.sensor import (
     SensorEntity,
@@ -13,9 +12,9 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
 
 from .const import DOMAIN
-from .webel_client import WebelClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,16 +27,16 @@ async def async_setup_entry(
     """Set up Webel sensors from a config entry."""
     _LOGGER.debug("Setting up Webel G-CTRL sensors for entry %s", entry.entry_id)
     entry_data = hass.data[DOMAIN][entry.entry_id]
-    client: WebelClient = entry_data["client"]
-    coordinator = entry_data["state_coordinator"]
+    state_coordinator: DataUpdateCoordinator = entry_data["state_coordinator"]
+    energy_coordinator: DataUpdateCoordinator = entry_data["energy_coordinator"]
 
-    energy_sensor = WebelEnergySensor(client, entry)
+    energy_sensor = WebelEnergySensor(energy_coordinator, entry)
     _LOGGER.debug(
         "Created Webel G-CTRL energy sensor entity with unique_id=%s",
         energy_sensor.unique_id,
     )
 
-    status_sensor = WebelStatusSensor(coordinator, entry)
+    status_sensor = WebelStatusSensor(state_coordinator, entry)
     _LOGGER.debug(
         "Created Webel G-CTRL status sensor entity with unique_id=%s",
         status_sensor.unique_id,
@@ -46,41 +45,29 @@ async def async_setup_entry(
     async_add_entities([energy_sensor, status_sensor])
 
 
-class WebelEnergySensor(SensorEntity):
+class WebelEnergySensor(CoordinatorEntity[DataUpdateCoordinator], SensorEntity):
     """Sensor reporting daily energy from Webel for use in Energy dashboard."""
 
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = "kWh"
 
-    def __init__(self, client: WebelClient, entry: ConfigEntry) -> None:
-        self._client = client
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_energy"
         self._attr_name = "Webel G-CTRL Energy"
-        self._native_value: float | None = None
 
     @property
     def native_value(self) -> float | None:
-        return self._native_value
+        """Return month-to-date cumulative energy in kWh.
 
-    async def async_update(self) -> None:
-        """Fetch latest energy usage and update month-to-date total.
-
-        The Webel API returns per-day kWh values for the current month.
-        Home Assistant's Energy dashboard expects a total-increasing meter
-        reading, so we sum all days in the current month up to today and
-        expose that cumulative value. The Energy dashboard will then
-        derive per-day usage from the differences.
+        The Webel API returns per-day values. We sum days in the current month
+        up to today to expose a total-increasing reading for Energy dashboard.
         """
-        _LOGGER.debug(
-            "Requesting latest energy usage from Webel for entry %s", self._entry.entry_id
-        )
-        data = await self._client.async_get_energyusage()
-        _LOGGER.debug("Energy usage response from Webel: %s", data)
+        data = self.coordinator.data or {}
         if not data:
-            _LOGGER.debug("No energy data returned from Webel")
-            return
+            return None
 
         try:
             timestamps = data["timestamps"].split("|")
@@ -88,7 +75,7 @@ class WebelEnergySensor(SensorEntity):
             energy_map: dict[str, str] = dict(zip(timestamps, values))
         except Exception as err:  # noqa: BLE001
             _LOGGER.warning("Failed to parse energy JSON: %s", err)
-            return
+            return None
 
         today = date.today()
         total = 0.0
@@ -112,20 +99,16 @@ class WebelEnergySensor(SensorEntity):
 
             total += val
 
-        self._native_value = total
-        _LOGGER.debug(
-            "Updated month-to-date energy total to %s kWh for %s",
-            self._native_value,
-            today,
-        )
+        return total
 
 
-class WebelStatusSensor(SensorEntity):
+class WebelStatusSensor(CoordinatorEntity[DataUpdateCoordinator], SensorEntity):
     """Sensor reporting the current status/problem of the Webel integration."""
 
     _attr_icon = "mdi:alert-circle-outline"
 
     def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
         self._coordinator = coordinator
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_status"
@@ -147,6 +130,3 @@ class WebelStatusSensor(SensorEntity):
 
         return "All ok!"
 
-    async def async_update(self) -> None:
-        """Request an updated state from the shared coordinator."""
-        await self._coordinator.async_request_refresh()

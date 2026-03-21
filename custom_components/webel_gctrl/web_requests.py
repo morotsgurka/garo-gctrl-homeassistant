@@ -3,6 +3,8 @@ import json
 import re
 from datetime import datetime, timedelta
 
+REQUEST_TIMEOUT = 10
+
 login_url_mobile= 'http://webel-online.se/mobile/login.asp'
 secure_url_mobile= 'http://webel-online.se/mobile/mobile.asp'
 mobile_request_url = 'http://webel-online.se/mobile/ajax/mobileajax.asp'
@@ -42,11 +44,11 @@ def validate_credentials(username: str, password: str) -> bool:
 
     with requests.session() as s:
         # Attempt login
-        resp_login = s.post(login_url_mobile, data=payload)
+        resp_login = s.post(login_url_mobile, data=payload, timeout=REQUEST_TIMEOUT)
         resp_login.raise_for_status()
 
         # Load the secured mobile page and look for the outlet ID
-        resp_mobile = s.get(secure_url_mobile)
+        resp_mobile = s.get(secure_url_mobile, timeout=REQUEST_TIMEOUT)
         resp_mobile.raise_for_status()
         m = OUTLET_ID_PATTERN.search(resp_mobile.text)
         if not m:
@@ -61,7 +63,7 @@ def get_dynamic_id(session: requests.Session) -> str:
     """
     Fetch mobile.asp and extract the outlet ID dynamically.
     """
-    resp = session.get(secure_url_mobile)
+    resp = session.get(secure_url_mobile, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
     m = OUTLET_ID_PATTERN.search(resp.text)
     if not m:
@@ -78,14 +80,16 @@ def fetch_all_bookings():
     check_credentials()
     with requests.session() as s:
         # login
-        s.post(login_url_mobile, data=login_payload)
+        login = s.post(login_url_mobile, data=login_payload, timeout=REQUEST_TIMEOUT)
+        login.raise_for_status()
         outlet_id = get_dynamic_id(s)
 
         payload = {
             'action': 'fetchallbookings',
             'id': outlet_id,
         }
-        r = s.post(mobile_request_url, data=payload)
+        r = s.post(mobile_request_url, data=payload, timeout=REQUEST_TIMEOUT)
+        r.raise_for_status()
         data = r.json()
 
         if int(data.get('success', "0")) < 1:
@@ -113,7 +117,8 @@ def turn_on(minutes: int = 120):
     check_credentials()
     with requests.session() as s:
         # login
-        s.post(login_url_mobile, data=login_payload)
+        login = s.post(login_url_mobile, data=login_payload, timeout=REQUEST_TIMEOUT)
+        login.raise_for_status()
         outlet_id = get_dynamic_id(s)
         # runtime -1 == 24h
         start_payload = {
@@ -128,7 +133,8 @@ def turn_on(minutes: int = 120):
 def turn_off():
     check_credentials()
     with requests.session() as s:
-        s.post(login_url_mobile, data=login_payload)
+        login = s.post(login_url_mobile, data=login_payload, timeout=REQUEST_TIMEOUT)
+        login.raise_for_status()
         outlet_id = get_dynamic_id(s)
 
         stop_payload = {
@@ -147,10 +153,11 @@ def check_state():
     check_credentials()
     with requests.session() as s:
         # login
-        s.post(login_url_mobile, data=login_payload)
+        login = s.post(login_url_mobile, data=login_payload, timeout=REQUEST_TIMEOUT)
+        login.raise_for_status()
 
         # load mobile.asp (this is where the button HTML is)
-        resp = s.get(secure_url_mobile)
+        resp = s.get(secure_url_mobile, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()
         html = resp.text
 
@@ -172,9 +179,11 @@ def perform_action_with_session(s: requests.Session, payload: dict):
     Assumes 'id' is already present in payload.
     """
     # Ensure we have loaded mobile.asp at least once (sets cookies etc.)
-    s.get(secure_url_mobile)
+    preflight = s.get(secure_url_mobile, timeout=REQUEST_TIMEOUT)
+    preflight.raise_for_status()
 
-    action = s.post(mobile_request_url, data=payload)
+    action = s.post(mobile_request_url, data=payload, timeout=REQUEST_TIMEOUT)
+    action.raise_for_status()
     json_response = action.json()
     if int(json_response.get('success', "0")) == 1:
         if payload['action'] == 'directstart':
@@ -199,7 +208,8 @@ def get_energyusage_raw(from_date: str | None = None, to_date: str | None = None
     """
     check_credentials()
     with requests.session() as s:
-        s.post(login_url_mobile, data=login_payload)
+        login = s.post(login_url_mobile, data=login_payload, timeout=REQUEST_TIMEOUT)
+        login.raise_for_status()
         outlet_id = get_dynamic_id(s)
 
         if from_date is None or to_date is None:
@@ -221,7 +231,8 @@ def get_energyusage_raw(from_date: str | None = None, to_date: str | None = None
             'toDate': to_date,
             'resolution': 'DAY'
         }
-        energy = s.post(mobile_request_url, data=energy_payload)
+        energy = s.post(mobile_request_url, data=energy_payload, timeout=REQUEST_TIMEOUT)
+        energy.raise_for_status()
         return energy.json()
 
 

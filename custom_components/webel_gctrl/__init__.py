@@ -15,7 +15,8 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[str] = ["switch", "calendar", "sensor", "binary_sensor"]
 
-SCAN_INTERVAL = timedelta(seconds=60)
+STATE_SCAN_INTERVAL = timedelta(seconds=60)
+ENERGY_SCAN_INTERVAL = timedelta(minutes=60)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -37,15 +38,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER,
         name="webel_gctrl_state",
         update_method=async_update_data,
-        update_interval=SCAN_INTERVAL,
+        update_interval=STATE_SCAN_INTERVAL,
+    )
+
+    async def async_update_energy_data() -> dict:
+        try:
+            data = await client.async_get_energyusage()
+            return data or {}
+        except Exception as err:  # noqa: BLE001
+            raise UpdateFailed(str(err)) from err
+
+    energy_coordinator = DataUpdateCoordinator(
+        hass,
+        _LOGGER,
+        name="webel_gctrl_energy",
+        update_method=async_update_energy_data,
+        update_interval=ENERGY_SCAN_INTERVAL,
     )
 
     await coordinator.async_config_entry_first_refresh()
+    await energy_coordinator.async_refresh()
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
         "client": client,
         "state_coordinator": coordinator,
+        "energy_coordinator": energy_coordinator,
     }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
