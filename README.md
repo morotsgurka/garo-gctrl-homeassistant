@@ -4,7 +4,7 @@
 
 ## Webel G-CTRL Home Assistant Integration
 
-This repository contains a custom Home Assistant integration for controlling a Webel G-CTRL (GARO) outlet.
+This repository contains a custom (non-official) Home Assistant integration for controlling a Webel G-CTRL (GARO) outlet.
 
 Webel Online is a service used by many Swedish parking lots and apartment complexes to control engine heater outlets. This integration lets you control those Webel G-CTRL outlets directly from Home Assistant.
 
