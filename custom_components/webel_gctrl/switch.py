@@ -53,7 +53,10 @@ class WebelSwitch(CoordinatorEntity[DataUpdateCoordinator], SwitchEntity):
 
     @property
     def available(self) -> bool:
-        return self._coordinator.last_update_success
+        if not self._coordinator.last_update_success:
+            return False
+        data = self._coordinator.data or {}
+        return not data.get("service_unavailable", False)
 
     @property
     def is_on(self) -> bool:

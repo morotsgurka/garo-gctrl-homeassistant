@@ -128,5 +128,8 @@ class WebelStatusSensor(CoordinatorEntity[DataUpdateCoordinator], SensorEntity):
         if not data:
             return "Problem: No data received from Webel Online"
 
+        if data.get("service_unavailable"):
+            return "Problem: Control board offline - no connection to outlet"
+
         return "All ok!"
 

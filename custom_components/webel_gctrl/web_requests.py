@@ -1,7 +1,10 @@
+import logging
 import requests
 import json
 import re
 from datetime import datetime, timedelta
+
+_LOGGER = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT = 10
 
@@ -18,6 +21,7 @@ login_payload = {
 
 OUTLET_ID_PATTERN = re.compile(r"id:\s*'([0-9A-Z\-]+)'")
 DIRECTSTART_TEXT_PATTERN = re.compile(r"Aktiverat till\s*([0-9]{2}:[0-9]{2})")
+SERVICE_UNAVAILABLE_PATTERN = re.compile(r"Servertj(?:\xe4|&auml;)nsten saknar f(?:\xf6|&ouml;)r tillf(?:\xe4|&auml;)llet f(?:\xf6|&ouml;)rbindelsen")
 
 def check_credentials():
     """Ensure credentials are present in login_payload.
@@ -161,15 +165,33 @@ def check_state():
         resp.raise_for_status()
         html = resp.text
 
-        # Look for the cancel_directstart button and its text
-        # The server-side HTML has: <button class="cancel_directstart" ...>Avbryt direktstart</button>
-        # But JS later changes it to: "Aktiverat till 16:30  -  Avbryt direktstart"
-        # So we just search for that phrase and extract the time.
+        _LOGGER.debug(
+            "check_state: mobile.asp HTTP %s, body length %d chars",
+            resp.status_code,
+            len(html),
+        )
+        # Log a snippet around the word 'Servertj' to show context if present
+        idx = html.lower().find("servertj")
+        if idx >= 0:
+            snippet = html[max(0, idx - 30) : idx + 120].replace("\n", " ")
+            _LOGGER.debug("check_state: found 'Servertj' at pos %d, snippet: %r", idx, snippet)
+        else:
+            _LOGGER.debug("check_state: 'Servertj' not found in HTML")
+
+        # Check for the control-board-offline popup message first
+        if SERVICE_UNAVAILABLE_PATTERN.search(html):
+            _LOGGER.debug("check_state: SERVICE_UNAVAILABLE_PATTERN matched -> service_unavailable=True")
+            return {"on": False, "until": None, "service_unavailable": True}
+
+        _LOGGER.debug("check_state: service unavailable pattern did NOT match")
+
         m = DIRECTSTART_TEXT_PATTERN.search(html)
         if m:
             until_time = m.group(1)  # e.g. "16:30"
+            _LOGGER.debug("check_state: directstart active until %s", until_time)
             return {"on": True, "until": until_time}
         else:
+            _LOGGER.debug("check_state: outlet is OFF (no directstart text found)")
             # No "Aktiverat till ..." text present → treat as OFF
             return {"on": False, "until": None}
 

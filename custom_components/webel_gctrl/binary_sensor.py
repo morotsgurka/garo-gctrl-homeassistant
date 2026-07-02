@@ -48,10 +48,13 @@ class WebelProblemBinarySensor(CoordinatorEntity[DataUpdateCoordinator], BinaryS
 
     @property
     def is_on(self) -> bool:
-        """Return True if there is a problem (no data / failed update)."""
+        """Return True if there is a problem (no data / failed update / board offline)."""
         if not self._coordinator.last_update_success:
             return True
 
         data = self._coordinator.data or {}
-        return not bool(data)
+        if not data:
+            return True
+
+        return bool(data.get("service_unavailable", False))
 
