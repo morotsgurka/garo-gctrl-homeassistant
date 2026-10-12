@@ -21,6 +21,10 @@ login_payload = {
 
 OUTLET_ID_PATTERN = re.compile(r"id:\s*'([0-9A-Z\-]+)'")
 DIRECTSTART_TEXT_PATTERN = re.compile(r"Aktiverat till\s*([0-9]{2}:[0-9]{2})")
+OFFLINE_CALL_PATTERN = re.compile(
+    r"(?<!function )\b(?:servernoconnection|transceiverDisabled)\s*\(\s*\)"
+    r"|changePage\(\s*['\"]#connectiondialog"
+)
 SERVICE_UNAVAILABLE_PATTERN = re.compile(r"Servertj(?:\xe4|&auml;)nsten saknar f(?:\xf6|&ouml;)r tillf(?:\xe4|&auml;)llet f(?:\xf6|&ouml;)rbindelsen")
 
 def check_credentials():
@@ -170,21 +174,12 @@ def check_state():
             resp.status_code,
             len(html),
         )
-        # Log a snippet around the word 'Servertj' to show context if present
-        idx = html.lower().find("servertj")
-        if idx >= 0:
-            snippet = html[max(0, idx - 30) : idx + 120].replace("\n", " ")
-            _LOGGER.debug("check_state: found 'Servertj' at pos %d, snippet: %r", idx, snippet)
-        else:
-            _LOGGER.debug("check_state: 'Servertj' not found in HTML")
-
-        # Check for the control-board-offline popup message first
-        if SERVICE_UNAVAILABLE_PATTERN.search(html):
-            _LOGGER.debug("check_state: SERVICE_UNAVAILABLE_PATTERN matched -> service_unavailable=True")
+        # "connectiondialog" text is always in mobile.asp, so it cannot signal offline.
+        # Desktop page defines servernoconnection()/transceiverDisabled(); a call (not definition) means offline.
+        # Online page references connectiondialog exactly twice (its id and its Ok handler).
+        if OFFLINE_CALL_PATTERN.search(html) or html.count("connectiondialog") > 2:
+            _LOGGER.debug("check_state: offline JS call found -> service_unavailable=True")
             return {"on": False, "until": None, "service_unavailable": True}
-
-        _LOGGER.debug("check_state: service unavailable pattern did NOT match")
-
         m = DIRECTSTART_TEXT_PATTERN.search(html)
         if m:
             until_time = m.group(1)  # e.g. "16:30"
