@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
 
-from .const import DOMAIN
+from .const import DOMAIN, get_device_info
 from .webel_client import WebelClient
 
 _LOGGER = logging.getLogger(__name__)
@@ -50,6 +50,7 @@ class WebelSwitch(CoordinatorEntity[DataUpdateCoordinator], SwitchEntity):
         self._client = client
         self._attr_unique_id = f"{entry.entry_id}_switch"
         self._attr_name = "Webel G-CTRL Outlet"
+        self._attr_device_info = get_device_info(entry)
 
     @property
     def available(self) -> bool:

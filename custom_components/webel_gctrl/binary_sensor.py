@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
 
-from .const import DOMAIN
+from .const import DOMAIN, get_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,7 +44,8 @@ class WebelProblemBinarySensor(CoordinatorEntity[DataUpdateCoordinator], BinaryS
         super().__init__(coordinator)
         self._coordinator = coordinator
         self._attr_unique_id = f"{entry.entry_id}_problem"
-        self._attr_name = "Webel G-CTRL Problem"
+        self._attr_name = "Webel G-CTRL Status"
+        self._attr_device_info = get_device_info(entry)
 
     @property
     def is_on(self) -> bool:

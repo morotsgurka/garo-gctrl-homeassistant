@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import DOMAIN, get_device_info
 from .webel_client import WebelClient
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,6 +37,7 @@ class WebelCalendar(CalendarEntity):
         self._events: list[CalendarEvent] = []
         self._attr_unique_id = f"{entry.entry_id}_calendar"
         self._attr_name = "Webel G-CTRL Bookings"
+        self._attr_device_info = get_device_info(entry)
 
     @property
     def event(self) -> CalendarEvent | None:

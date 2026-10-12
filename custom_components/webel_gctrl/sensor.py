@@ -14,7 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
 
-from .const import DOMAIN
+from .const import DOMAIN, get_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,6 +57,7 @@ class WebelEnergySensor(CoordinatorEntity[DataUpdateCoordinator], SensorEntity):
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_energy"
         self._attr_name = "Webel G-CTRL Energy"
+        self._attr_device_info = get_device_info(entry)
 
     @property
     def native_value(self) -> float | None:
@@ -112,7 +113,8 @@ class WebelStatusSensor(CoordinatorEntity[DataUpdateCoordinator], SensorEntity):
         self._coordinator = coordinator
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_status"
-        self._attr_name = "Webel G-CTRL Status"
+        self._attr_name = "Webel G-CTRL Status Message"
+        self._attr_device_info = get_device_info(entry)
 
     @property
     def native_value(self) -> str:
